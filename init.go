@@ -39,8 +39,7 @@ var (
 	debug = flag.Bool("debug", false, "Enable debug logging.")
 	trace = flag.Bool("trace", false, "Enable trace logging. EXTREMELY VERBOSE.")
 
-	// The logging context always includes a random UUID which uniquely identifys this particular
-	// version/invocation of this program.
+	// The logging context always includes a random UUID for this particular invocation of this program.
 	globalUUID uuid.UUID
 
 	globalLogSinks = logSinks{
@@ -57,8 +56,7 @@ var (
 )
 
 func init() {
-	id, err := uuid.NewV7()
-	if err != nil {
+	if id, err := uuid.NewV7(); err != nil {
 		Fatalf(context.Background(), "Could not create a unique ID for this instance: %v", err)
 	} else {
 		globalUUID = id
@@ -107,13 +105,12 @@ func OrderFromContext(ctx context.Context) tagOrder {
 	return typed
 }
 
-// With adds a tag to the context, to carry into subsequent logging calls.
+// With adds a tag to the context to carry into subsequent logging calls.
 func With(ctx context.Context, k string, v any) context.Context {
 	return WithAll(ctx, Tags{k: v})
 }
 
-// WithAll adds multiple tags at once to a context, which avoids a ton of GC churn when you know you have multiple
-// things to add to a logging statement.
+// WithAll adds multiple tags at once to a context, which avoids a ton of GC churn.
 func WithAll(ctx context.Context, tags Tags) context.Context {
 	order := OrderFromContext(ctx)
 	ts := TagsFromContext(ctx)
@@ -139,7 +136,7 @@ func EachTag(ctx context.Context, f func(k string, v any) error) error {
 	order := OrderFromContext(ctx)
 	tags := TagsFromContext(ctx)
 
-	// Ensure that tags get printed in order of addition, which creates a nice nesting effect.
+	// Process the tags in order of addition, which makes a nice nesting effect.
 	for _, k := range order {
 		val := tags[k]
 
@@ -149,7 +146,7 @@ func EachTag(ctx context.Context, f func(k string, v any) error) error {
 	}
 
 	// Always add the globalUUID last.
-	if err := f("meta.instance", globalUUID.String()); err != nil {
+	if err := f("meta.instance", globalUUID); err != nil {
 		return err
 	}
 

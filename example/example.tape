@@ -1,4 +1,4 @@
-Output example.webm
+Output example.gif
 
 Set Theme nord
 Set FontFamily "Fantasque Sans Mono"
@@ -7,6 +7,12 @@ Set Width 1300
 Set Height 600
 
 Type "go run ./example"
-Sleep 500ms
+Enter
+Sleep 10s
+
+Type "clear"
+Enter
+
+Type "go run ./example 2>&1 | cat"
 Enter
 Sleep 10s

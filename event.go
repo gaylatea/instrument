@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// PostEvent emits a user-created raw event. It only includes the given tags, and some important metadata.
+// PostEvent emits a user-created raw event without contextual metadata.
 func PostEvent(ctx context.Context, name string, t Tags) {
 	caller, filename, line := getCaller(2)
 

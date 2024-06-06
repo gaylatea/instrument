@@ -11,8 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-type Tags map[string]any
-type sinks map[string]Sink
+type (
+	Tags  map[string]any
+	sinks map[string]Sink
+)
 
 type contextKey int
 
@@ -28,7 +30,7 @@ var (
 	trace  = flag.Bool("trace", false, "Enable trace logging. EXTREMELY VERBOSE.")
 	silent = flag.Bool("silent", false, "Silence terminal output from default sink. Will not affect other sinks.")
 
-	// The logging context always includes a random UUID for this particular invocation of this program.
+	// The logging context always includes a random ID to differentiate program runs.
 	instanceID uuid.UUID
 
 	// Always include the terminal sink.
@@ -50,10 +52,11 @@ func init() {
 		instanceID = id
 	}
 
-	// Startup a signal handler to allow switching log levels at runtime.
+	// Startup a signal handler to switch log levels at runtime.
 	go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, syscall.SIGHUP, syscall.SIGUSR1)
+
 		for {
 			switch <-c {
 			case syscall.SIGHUP:
@@ -78,7 +81,7 @@ func UseSink(name string, s Sink) {
 	globalSinks[name] = s
 }
 
-// WithSink adds a sink for this context.
+// WithSink adds a sink for the given context.
 func WithSink(ctx context.Context, name string, s Sink) context.Context {
 	for sinkName := range allSinks(ctx) {
 		if name == sinkName {
@@ -92,12 +95,12 @@ func WithSink(ctx context.Context, name string, s Sink) context.Context {
 	return context.WithValue(ctx, keyConfiguredSinks, sinks)
 }
 
-// With adds a tag to the context to carry into subsequent logging calls.
+// With adds a single tag to the given context.
 func With(ctx context.Context, k string, v any) context.Context {
 	return WithAll(ctx, Tags{k: v})
 }
 
-// WithAll adds multiple tags at once to a context, which might avoid GC churn.
+// WithAll adds multiple tags to the given context.
 func WithAll(ctx context.Context, tags Tags) context.Context {
 	ts := tagsFromContext(ctx)
 

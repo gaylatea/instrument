@@ -12,28 +12,32 @@ import (
 	"github.com/muesli/termenv"
 )
 
-const valueSep = ", "
-const null = "null"
-const startMap = "{"
-const endMap = "}"
-const startArray = "["
-const endArray = "]"
+const (
+	valueSep   = ", "
+	null       = "null"
+	startMap   = "{"
+	endMap     = "}"
+	startArray = "["
+	endArray   = "]"
+)
 
-const emptyMap = startMap + endMap
-const emptyArray = startArray + endArray
+const (
+	emptyMap   = startMap + endMap
+	emptyArray = startArray + endArray
+)
 
-// Color used in human-readable terminal output, chosen to mimic the default jq colors.
+// Color used in human-readable terminal output, chosen to mimic the default `jq` colors.
 var (
-	stringColor = lipgloss.NewStyle().Foreground(lipgloss.Color("#8ae234"))
-	boolColor   = lipgloss.NewStyle().Foreground(lipgloss.Color("#34e2e2"))
-	numberColor = lipgloss.NewStyle().Foreground(lipgloss.Color("#fce94f"))
-	nullColor   = lipgloss.NewStyle().Foreground(lipgloss.Color("#ad7fa8"))
+	stringColor = newStyle("#8ae234")
+	boolColor   = newStyle("#34e2e2")
+	numberColor = newStyle("#fce94f")
+	nullColor   = newStyle("#ad7fa8")
 )
 
 // The default color profile determined by lipgloss, used by ResetColor.
 var defaultProfile = lipgloss.ColorProfile()
 
-// Colorize forces colorized output. Beware of using this without a TTY.
+// Colorize forces colorized output, even without a TTY.
 func Colorize() {
 	lipgloss.SetColorProfile(termenv.TrueColor)
 }
@@ -44,27 +48,27 @@ func ResetColor() {
 }
 
 // sprintf writes a string in the given color.
-func sprintf(c lipgloss.Style, format string, args ...interface{}) string {
+func sprintf(c *lipgloss.Style, format string, args ...interface{}) string {
 	return c.Render(fmt.Sprintf(format, args...))
 }
 
-// marshal emits colorized JSON output. Adapted from TylerBrock/colorjson with some instrument-specific modifications:
-//   - Uses lipgloss instead of fatih/color.
+// marshal emits colorized JSON output. Adapted from TylerBrock/colorjson with instrument-specific modifications:
+//   - Uses lipgloss rather than of fatih/color.
 //   - The caller determines the key color.
-//   - No newlines in the output except for the end.
+//   - No newlines in the output.
 //   - No indentation.
-//   - No string maximum length.
+//   - No max string length.
 //   - No sorting map keys.
 //   - No input validation.
-//   - Handles additional built-in types.
-func marshal(jsonObj interface{}, keyColor lipgloss.Style) ([]byte, error) {
+//   - Handles more built-in types.
+func marshal(jsonObj Tags, keyColor *lipgloss.Style) ([]byte, error) {
 	buffer := bytes.Buffer{}
 	marshalValue(jsonObj, &buffer, keyColor)
 	return buffer.Bytes(), nil
 }
 
 // marshalMap writes a JSON map.
-func marshalMap(m map[string]interface{}, buf *bytes.Buffer, keyColor lipgloss.Style) {
+func marshalMap(m map[string]interface{}, buf *bytes.Buffer, keyColor *lipgloss.Style) {
 	remaining := len(m)
 
 	if remaining == 0 {
@@ -86,7 +90,7 @@ func marshalMap(m map[string]interface{}, buf *bytes.Buffer, keyColor lipgloss.S
 }
 
 // marshalArray writes a JSON array.
-func marshalArray(a []interface{}, buf *bytes.Buffer, keyColor lipgloss.Style) {
+func marshalArray(a []interface{}, buf *bytes.Buffer, keyColor *lipgloss.Style) {
 	if len(a) == 0 {
 		buf.WriteString(emptyArray)
 		return
@@ -104,10 +108,8 @@ func marshalArray(a []interface{}, buf *bytes.Buffer, keyColor lipgloss.Style) {
 }
 
 // marshalValue handles a bunch of different built-in types.
-func marshalValue(val interface{}, buf *bytes.Buffer, keyColor lipgloss.Style) {
+func marshalValue(val interface{}, buf *bytes.Buffer, keyColor *lipgloss.Style) {
 	switch v := val.(type) {
-	case Tags:
-		marshalMap(v, buf, keyColor)
 	case map[string]interface{}:
 		marshalMap(v, buf, keyColor)
 	case []interface{}:

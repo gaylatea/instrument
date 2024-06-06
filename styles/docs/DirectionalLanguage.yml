@@ -1,0 +1,10 @@
+extends: existence
+message: "Don't use '%' to refer to a location. Directional or visual instructions are unhelpful to visually impaired users."
+link: 'https://docs.splunk.com/Documentation/StyleGuide/current/StyleGuide/Overview#Writing'
+level: suggestion
+ignorecase: true
+tokens:
+  - above
+  - below
+  - left
+  - right

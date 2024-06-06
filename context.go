@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// sinksFromContext returns any configured event sinks for this event.
+// sinksFromContext returns any configured event sinks for the given context.
 func sinksFromContext(ctx context.Context) sinks {
 	val := ctx.Value(keyConfiguredSinks)
 	if val == nil {
@@ -22,7 +22,7 @@ func sinksFromContext(ctx context.Context) sinks {
 	return maps.Clone(typed)
 }
 
-// tagsFromContext returns any configured tags for this event.
+// tagsFromContext returns any configured tags for the given context.
 func tagsFromContext(ctx context.Context) Tags {
 	val := ctx.Value(keyTags)
 	if val == nil {
@@ -37,7 +37,7 @@ func tagsFromContext(ctx context.Context) Tags {
 	return maps.Clone(typed)
 }
 
-// traceIDFromContext returns the current trace for this event.
+// traceIDFromContext returns the current trace for the given context.
 func traceIDFromContext(ctx context.Context) uuid.UUID {
 	val := ctx.Value(keyTraceID)
 	if val == nil {

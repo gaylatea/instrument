@@ -33,7 +33,7 @@ func Infof(ctx context.Context, msg string, args ...interface{}) {
 	logf(ctx, INFO, msg, args...)
 }
 
-// Debugf prints debug info when in debug mode.
+// Debugf prints debug information when in debug mode.
 func Debugf(ctx context.Context, msg string, args ...interface{}) {
 	logf(ctx, DEBUG, msg, args...)
 }
@@ -53,7 +53,7 @@ func Warnf(ctx context.Context, msg string, args ...interface{}) {
 	logf(ctx, WARN, msg, args...)
 }
 
-// Fatalf prints an error and immediately stops the app.
+// Fatalf prints an error and quits the app.
 func Fatalf(ctx context.Context, msg string, args ...interface{}) {
 	logf(ctx, FATAL, msg, args...)
 	os.Exit(1)

@@ -1,0 +1,9 @@
+extends: existence
+message: "Write out 'and' unless the ampersand is part of a proper name."
+link: https://docs.splunk.com/Documentation/StyleGuide/current/StyleGuide/Ampersand
+nonword: true
+level: warning
+ignorecase: false
+scope: sentence
+tokens:
+  - "&"

@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// TraceFunc implementers run in the context of a trace, and can modify their parent.
+// TraceFunc implementers run in the context of a trace.
 type TraceFunc func(ctx context.Context, addToParent func(Tags)) error
 
 // WithSpan runs a given function and emits trace-specific metadata.

@@ -1,10 +1,15 @@
 Output example.gif
 
+Set WindowBar Colorful
 Set Theme nord
 Set FontFamily "Fantasque Sans Mono"
 Set FontSize 14
 Set Width 1300
 Set Height 600
+Set Padding 20
+Set Margin 20
+Set MarginFill "#3B4252"
+Set BorderRadius 10
 
 Type "go run ./example"
 Enter

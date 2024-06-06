@@ -2,59 +2,77 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"time"
 
 	"github.com/gaylatea/instrument"
 )
 
-func init() {
-	flag.Parse()
+// CounterSink counts incoming events.
+type CounterSink struct {
+	count int
 }
 
-type PrintLogger struct{}
-
-func (pl *PrintLogger) Log(ctx context.Context, l instrument.Level, filename string, line int, msg string, args ...interface{}) error {
-	fmt.Printf("[🌎] %s\n", fmt.Sprintf(msg, args...))
+// Event counts events.
+func (c *CounterSink) Event(_ context.Context, _ instrument.Tags) error {
+	c.count++
 	return nil
 }
 
 func main() {
+	counter := &CounterSink{}
+	instrument.UseSink("counter", counter)
+
 	bare := context.Background()
-	instrument.Infof(bare, "This is a bare context with no attached tags.")
+	instrument.PostEvent(bare, "Test event", nil)
+	instrument.Infof(bare, "This shouldn't have any tags.")
 
-	ctx := instrument.With(bare, "test", "hello")
-	instrument.Tracef(ctx, "This is a trace level message.")
-	instrument.Debugf(ctx, "This is a debug level message.")
+	instrument.Tracef(bare, "This shouldn't show up.")
+	instrument.Debugf(bare, "This shouldn't show up.")
 
-	instrument.Infof(ctx, "This is an info level message.")
+	instrument.SetTrace(true)
+	instrument.Tracef(bare, "This should show up.")
+	instrument.Debugf(bare, "This should show up.")
+	instrument.SetTrace(false)
+	instrument.SetDebug(true)
+	instrument.Tracef(bare, "This shouldn't show up.")
+	instrument.Debugf(bare, "This should show up.")
 
-	_ = instrument.WithSpan(ctx, "Hella cool span", func(ctx context.Context, _ func(instrument.Tags)) error {
-		instrument.Warnf(ctx, "This should appear inside of the trace.")
-		_ = instrument.WithSpan(ctx, "Nested span", func(ctx context.Context, _ func(instrument.Tags)) error {
-			instrument.Infof(ctx, "This is a doubly-nested log.")
-			instrument.Infof(ctx, "This is a doubly-nested log.")
-			instrument.Infof(ctx, "This is a doubly-nested log.")
-			instrument.Infof(ctx, "This is a doubly-nested log.")
-			instrument.Infof(ctx, "This is a doubly-nested log.")
-			instrument.Infof(ctx, "This is a doubly-nested log.")
-			instrument.Infof(ctx, "This is a doubly-nested log.")
-			instrument.Infof(ctx, "This is a doubly-nested log.")
-			return nil
+	tagged := instrument.With(bare, "test", "hello")
+	instrument.Infof(tagged, "This should have a new tag.")
+
+	_ = instrument.WithSpan(tagged, "Span 1", func(ctx context.Context, _ func(instrument.Tags)) error {
+		instrument.Infof(ctx, "This should appear inside of the trace.")
+
+		newCounter := &CounterSink{}
+		ctx = instrument.WithSink(ctx, "counter2", newCounter)
+
+		_ = instrument.WithSpan(ctx, "Span 2", func(ctx context.Context, _ func(instrument.Tags)) error {
+			instrument.Infof(ctx, "This should be parented to Span 2.")
+			return fmt.Errorf("unknown error")
 		})
+
+		instrument.Infof(ctx, "Span 1 collected %d events.", newCounter.count)
 		return nil
 	})
 
-	ctx = instrument.With(ctx, "test", "list")
-	ctx = instrument.WithLogSink(ctx, "print", &PrintLogger{})
-	instrument.Warnf(ctx, "This is a warning level message.")
-	instrument.Errorf(ctx, "This is an error level message.")
+	instrument.Silence(true)
+	instrument.Infof(tagged, "This shouldn't show up.")
+	instrument.Silence(false)
 
-	timedOut, cancel := context.WithTimeout(ctx, 1*time.Second)
+	override := instrument.With(tagged, "test", "list")
+	instrument.Infof(override, "This should have a different tag.")
+	instrument.Infof(tagged, "This should have the original tag.")
+
+	instrument.Colorize()
+	instrument.Errorf(tagged, "This should be colorized no matter what.")
+	instrument.ResetColor()
+
+	timedOut, cancel := context.WithTimeout(tagged, 1*time.Second)
 	defer cancel()
 
-	instrument.Infof(timedOut, "This message should still appear with tags.")
+	instrument.Infof(timedOut, "This should still have tags.")
 
-	instrument.Fatalf(bare, "This is a fatal message- the program should exit.")
+	instrument.Infof(tagged, "%d events counted.", counter.count)
+	instrument.Fatalf(bare, "This should exit the program.")
 }

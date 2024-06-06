@@ -2,94 +2,63 @@ package instrument
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
+	"maps"
 	"time"
-
-	"github.com/google/uuid"
-	"github.com/mattn/go-isatty"
 )
 
-type EventSink interface {
-	Event(ctx context.Context, name string, t Tags) error
-}
-
+// PostEvent emits a user-created raw event. It only includes the given tags, and some important metadata.
 func PostEvent(ctx context.Context, name string, t Tags) {
-	eventID, err := uuid.NewV7()
-	if err != nil {
-		Errorf(ctx, "cannot generate a new event ID: %v", err)
-		eventID = uuid.Nil
-	}
+	caller, filename, line := getCaller(2)
 
-	t["event.id"] = eventID
-	traceID := TraceIDFromContext(ctx)
-	if traceID != uuid.Nil {
-		t["event.trace.id"] = traceID
+	if t == nil {
+		t = Tags{}
 	}
 
 	t["event.name"] = name
-	t["meta.instance"] = globalUUID
+	t["meta.caller"] = caller
+	t["meta.file"] = filename
+	t["meta.line"] = line
+	emit(ctx, t)
+}
 
-	for sinkName, sink := range globalEventSinks {
-		if err := sink.Event(ctx, name, t); err != nil {
-			Errorf(ctx, "Could not process event sink '%s': %v", sinkName, err)
+// emit fans out raw event data to the configured sinks.
+func emit(ctx context.Context, t Tags) {
+	if t == nil {
+		t = Tags{}
+	}
+
+	t["meta.instance"] = instanceID
+	t["meta.timestamp"] = time.Now()
+
+	// Handle debug/trace messages here.
+	if rawLevel, ok := t["meta.level"]; ok {
+		switch rawLevel {
+		case DEBUG:
+			if !*debug {
+				return
+			}
+		case TRACE:
+			if !*trace {
+				return
+			}
+		}
+	}
+
+	for sinkName, sink := range allSinks(ctx) {
+		if err := sink.Event(ctx, t); err != nil {
+			_ = terminal.Event(ctx, Tags{
+				"meta.level": ERROR,
+				"error":      fmt.Sprintf("could not process event sink '%s': %v", sinkName, err),
+			})
 		}
 	}
 }
 
-func UseEventSink(name string, s EventSink) {
-	globalEventSinks[name] = s
-}
+// allSinks returns a merged view of global and context-specific sinks for an event.
+func allSinks(ctx context.Context) sinks {
+	s := maps.Clone(globalSinks)
+	maps.Copy(s, sinksFromContext(ctx))
 
-type ConsoleEventSink struct{}
-
-func (cs *ConsoleEventSink) Event(ctx context.Context, name string, t Tags) error {
-	if isatty.IsTerminal(os.Stderr.Fd()) {
-		return cs.logForHumans(ctx, name, t)
-	}
-
-	return cs.logAsJSON(ctx, name, t)
-}
-
-func (cs *ConsoleEventSink) logAsJSON(_ context.Context, _ string, t Tags) error {
-	if final, err := json.Marshal(t); err != nil {
-		return fmt.Errorf("could not create JSON output: %w", err)
-	} else {
-		if _, err := os.Stderr.Write(final); err != nil {
-			return fmt.Errorf("could not emit log: %w", err)
-		}
-
-		if _, err := os.Stderr.WriteString("\n"); err != nil {
-			return fmt.Errorf("could not add newline: %w", err)
-		}
-	}
-	return nil
-}
-
-// logForHumans emits a formatted text string with colorized tags.
-func (cs *ConsoleEventSink) logForHumans(ctx context.Context, name string, t Tags) error {
-	color := levelToColor[INFO]
-
-	metadata := fmt.Sprintf("[%s] %-33s %s", color.Render("EVT"), time.Now().Format(time.RFC3339Nano), name)
-
-	var b strings.Builder
-	b.WriteString(metadata)
-
-	for k, v := range t {
-		switch k {
-		// Remove some tags that aren't useful in console output.
-		case "event.name":
-		case "event.id":
-		case "event.trace.id":
-		case "meta.instance":
-		default:
-			b.WriteString(fmt.Sprintf(" %s=%v", color.Render(k), v))
-		}
-
-	}
-
-	_, err := os.Stderr.WriteString(prefixed(ctx, false, b.String()))
-	return err
+	return s
 }

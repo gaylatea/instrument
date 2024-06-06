@@ -5,61 +5,49 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"github.com/google/uuid"
 )
 
 type Tags map[string]any
-type tagOrder []string
-type logSinks map[string]LogSink
-type traceSinks map[string]TraceSink
-type eventSinks map[string]EventSink
+type sinks map[string]Sink
 
 type contextKey int
 
 const (
 	keyTags contextKey = iota
 	keyOrder
-
-	keyConfiguredLogSinks
-	keyConfiguredMetricSinks
-	keyConfiguredTraceSinks
-
+	keyConfiguredSinks
 	keyTraceID
-	keyTraceParent
-	keyTraceDepth
-	keyTraceName
-	keyTraceError
-	keyTraceDuration
-	keyTraceStart
 )
 
 var (
-	debug = flag.Bool("debug", false, "Enable debug logging.")
-	trace = flag.Bool("trace", false, "Enable trace logging. EXTREMELY VERBOSE.")
+	debug  = flag.Bool("debug", false, "Enable debug logging.")
+	trace  = flag.Bool("trace", false, "Enable trace logging. EXTREMELY VERBOSE.")
+	silent = flag.Bool("silent", false, "Silence terminal output from default sink. Will not affect other sinks.")
 
 	// The logging context always includes a random UUID for this particular invocation of this program.
-	globalUUID uuid.UUID
+	instanceID uuid.UUID
 
-	globalLogSinks = logSinks{
-		"console": &ConsoleLogSink{},
-	}
-
-	globalTraceSinks = traceSinks{
-		"console": &ConsoleTraceSink{},
-	}
-
-	globalEventSinks = eventSinks{
-		"console": &ConsoleEventSink{},
+	// Always include the terminal sink.
+	terminal    = &TerminalSink{}
+	globalSinks = sinks{
+		"terminal": terminal,
 	}
 )
+
+// Sink implementers receive events and pass them along to downstream systems.
+type Sink interface {
+	Event(ctx context.Context, t Tags) error
+}
 
 func init() {
 	if id, err := uuid.NewV7(); err != nil {
 		Fatalf(context.Background(), "Could not create a unique ID for this instance: %v", err)
 	} else {
-		globalUUID = id
+		instanceID = id
 	}
 
 	// Startup a signal handler to allow switching log levels at runtime.
@@ -77,32 +65,31 @@ func init() {
 	}()
 }
 
-func TagsFromContext(ctx context.Context) Tags {
-	val := ctx.Value(keyTags)
-	if val == nil {
-		return Tags{}
+// UseSink sets a global sink for all events.
+func UseSink(name string, s Sink) {
+	ctx := context.Background()
+
+	for sinkName := range allSinks(ctx) {
+		if name == sinkName {
+			Fatalf(ctx, "Cannot override existing '%s' sink!")
+		}
 	}
 
-	typed, ok := val.(Tags)
-	if !ok {
-		return Tags{}
-	}
-
-	return typed
+	globalSinks[name] = s
 }
 
-func OrderFromContext(ctx context.Context) tagOrder {
-	val := ctx.Value(keyOrder)
-	if val == nil {
-		return tagOrder{}
+// WithSink adds a sink for this context.
+func WithSink(ctx context.Context, name string, s Sink) context.Context {
+	for sinkName := range allSinks(ctx) {
+		if name == sinkName {
+			Fatalf(ctx, "Cannot override existing '%s' sink!")
+		}
 	}
 
-	typed, ok := val.(tagOrder)
-	if !ok {
-		return tagOrder{}
-	}
+	sinks := sinksFromContext(ctx)
+	sinks[name] = s
 
-	return typed
+	return context.WithValue(ctx, keyConfiguredSinks, sinks)
 }
 
 // With adds a tag to the context to carry into subsequent logging calls.
@@ -110,53 +97,39 @@ func With(ctx context.Context, k string, v any) context.Context {
 	return WithAll(ctx, Tags{k: v})
 }
 
-// WithAll adds multiple tags at once to a context, which avoids a ton of GC churn.
+// WithAll adds multiple tags at once to a context, which might avoid GC churn.
 func WithAll(ctx context.Context, tags Tags) context.Context {
-	order := OrderFromContext(ctx)
-	ts := TagsFromContext(ctx)
+	ts := tagsFromContext(ctx)
 
 	// Add all the tags.
 	for k, val := range tags {
-		// Don't print multiple times.
-		if _, exists := ts[k]; !exists {
-			order = append(order, k)
-		}
-
 		ts[k] = val
 	}
 
-	ctx = context.WithValue(ctx, keyOrder, order)
-	ctx = context.WithValue(ctx, keyTags, ts)
-
-	return ctx
+	return context.WithValue(ctx, keyTags, ts)
 }
 
-// EachTag executes a given func() over each of the tags in order of addition.
-func EachTag(ctx context.Context, f func(k string, v any) error) error {
-	order := OrderFromContext(ctx)
-	tags := TagsFromContext(ctx)
-
-	// Process the tags in order of addition, which makes a nice nesting effect.
-	for _, k := range order {
-		val := tags[k]
-
-		if err := f(k, val); err != nil {
-			return err
-		}
-	}
-
-	// Always add the globalUUID last.
-	if err := f("meta.instance", globalUUID); err != nil {
-		return err
-	}
-
-	return nil
-}
-
+// SetDebug sets the visibility of debug events.
 func SetDebug(to bool) {
 	*debug = to
 }
 
+// SetTrace sets the visibility of trace and debug events.
 func SetTrace(to bool) {
+	*debug = to
 	*trace = to
+}
+
+// Silence toggles the default terminal output.
+func Silence(to bool) {
+	*silent = to
+}
+
+// getCaller returns information up the stack, used for metadata.
+func getCaller(depth int) (caller, file string, line int) {
+	pc, _, _, _ := runtime.Caller(depth)
+	fn := runtime.FuncForPC(pc)
+
+	file, line = fn.FileLine(pc)
+	return fn.Name(), file, line
 }

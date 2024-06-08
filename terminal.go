@@ -10,29 +10,27 @@ import (
 type TerminalSink struct{}
 
 // Event writes colorized JSON to the terminal for debugging.
-func (cs *TerminalSink) Event(_ context.Context, t Tags) error {
+func (cs *TerminalSink) Event(_ context.Context, givenTags Tags) error {
 	if *silent {
 		return nil
 	}
 
 	keyColor := levelToColor[INFO]
-	if rawLevel, ok := t["meta.level"]; ok {
+
+	if rawLevel, ok := givenTags["meta.level"]; ok {
 		level, ok := rawLevel.(Level)
 		if ok {
 			keyColor = levelToColor[level]
 		}
 	}
 
-	if final, err := marshal(t, keyColor); err != nil {
-		return fmt.Errorf("could not create JSON output: %w", err)
-	} else {
-		if _, err := os.Stderr.Write(final); err != nil {
-			return fmt.Errorf("could not emit log: %w", err)
-		}
+	final := marshal(givenTags, keyColor)
+	if _, err := os.Stderr.Write(final); err != nil {
+		return fmt.Errorf("could not emit log: %w", err)
+	}
 
-		if _, err := os.Stderr.WriteString("\n"); err != nil {
-			return fmt.Errorf("could not add newline: %w", err)
-		}
+	if _, err := os.Stderr.WriteString("\n"); err != nil {
+		return fmt.Errorf("could not add newline: %w", err)
 	}
 
 	return nil

@@ -22,8 +22,8 @@ runtimes:
 lint:
   disabled:
   enabled:
-    - localvale@3.4.2
-    - checkov@3.2.125
+    - localvale@3.5.0
+    - checkov@3.2.128
     - git-diff-check
     - gofmt@1.20.4
     - golangci-lint@1.57.2

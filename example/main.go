@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
-	"github.com/gaylatea/instrument"
+	"tfw.computer/go/instrument"
 )
+
+var ErrUnknown = errors.New("unknown error")
 
 // CounterSink counts incoming events.
 type CounterSink struct {
@@ -16,11 +18,12 @@ type CounterSink struct {
 // Event counts events.
 func (c *CounterSink) Event(_ context.Context, _ instrument.Tags) error {
 	c.count++
+
 	return nil
 }
 
 func main() {
-	counter := &CounterSink{}
+	counter := &CounterSink{count: 0}
 	instrument.UseSink("counter", counter)
 
 	bare := context.Background()
@@ -44,15 +47,17 @@ func main() {
 	_ = instrument.WithSpan(tagged, "Span 1", func(ctx context.Context, _ func(instrument.Tags)) error {
 		instrument.Infof(ctx, "This should appear inside of the trace.")
 
-		newCounter := &CounterSink{}
+		newCounter := &CounterSink{count: 0}
 		ctx = instrument.WithSink(ctx, "counter2", newCounter)
 
 		_ = instrument.WithSpan(ctx, "Span 2", func(ctx context.Context, _ func(instrument.Tags)) error {
 			instrument.Infof(ctx, "This should be parented to Span 2.")
-			return fmt.Errorf("unknown error")
+
+			return ErrUnknown
 		})
 
 		instrument.Infof(ctx, "Span 1 collected %d events.", newCounter.count)
+
 		return nil
 	})
 

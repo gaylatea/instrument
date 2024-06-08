@@ -8,12 +8,14 @@ import (
 	"github.com/google/uuid"
 )
 
+const traceCallerSkip = 2
+
 // TraceFunc implementers run in the context of a trace.
 type TraceFunc func(ctx context.Context, addToParent func(Tags)) error
 
 // WithSpan runs a given function and emits trace-specific metadata.
-func WithSpan(ctx context.Context, name string, fn TraceFunc) error {
-	caller, filename, line := getCaller(2)
+func WithSpan(ctx context.Context, name string, traced TraceFunc) error {
+	caller, filename, line := getCaller(traceCallerSkip)
 
 	traceID, err := uuid.NewV7()
 	if err != nil {
@@ -23,30 +25,31 @@ func WithSpan(ctx context.Context, name string, fn TraceFunc) error {
 	parent := traceIDFromContext(ctx)
 	newCtx := context.WithValue(ctx, keyTraceID, traceID)
 	start := time.Now()
-	wrappedErr := fn(newCtx, func(ts Tags) {
+	wrappedErr := traced(newCtx, func(ts Tags) {
 		newCtx = WithAll(newCtx, ts)
 	})
 
-	t := tagsFromContext(newCtx)
+	newTags := tagsFromContext(newCtx)
 	if wrappedErr != nil {
-		t["meta.level"] = ERROR
-		t["trace.error"] = wrappedErr
+		newTags["meta.level"] = ERROR
+		newTags["trace.error"] = wrappedErr
 	} else {
-		t["meta.level"] = INFO
+		newTags["meta.level"] = INFO
 	}
 
-	t["trace.id"] = traceID
+	newTags["trace.name"] = name
+	newTags["trace.start"] = start
+	newTags["trace.duration"] = time.Since(start)
+	newTags["meta.file"] = filename
+	newTags["meta.line"] = line
+	newTags["meta.caller"] = caller
+	newTags["trace.id"] = traceID
+
 	if parent != uuid.Nil {
-		t["trace.parent"] = parent
+		newTags["trace.parent"] = parent
 	}
-	t["trace.name"] = name
-	t["trace.start"] = start
-	t["trace.duration"] = time.Since(start)
-	t["meta.file"] = filename
-	t["meta.line"] = line
-	t["meta.caller"] = caller
 
-	emit(newCtx, t)
+	emit(newCtx, newTags)
 
 	return wrappedErr
 }

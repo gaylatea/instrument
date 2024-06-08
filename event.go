@@ -7,32 +7,34 @@ import (
 	"time"
 )
 
-// PostEvent emits a user-created raw event without contextual metadata.
-func PostEvent(ctx context.Context, name string, t Tags) {
-	caller, filename, line := getCaller(2)
+const eventCallerSkip = 2
 
-	if t == nil {
-		t = Tags{}
+// PostEvent emits a user-created raw event without contextual metadata.
+func PostEvent(ctx context.Context, name string, givenTags Tags) {
+	caller, filename, line := getCaller(eventCallerSkip)
+
+	if givenTags == nil {
+		givenTags = Tags{}
 	}
 
-	t["event.name"] = name
-	t["meta.caller"] = caller
-	t["meta.file"] = filename
-	t["meta.line"] = line
-	emit(ctx, t)
+	givenTags["event.name"] = name
+	givenTags["meta.caller"] = caller
+	givenTags["meta.file"] = filename
+	givenTags["meta.line"] = line
+	emit(ctx, givenTags)
 }
 
 // emit fans out raw event data to the configured sinks.
-func emit(ctx context.Context, t Tags) {
-	if t == nil {
-		t = Tags{}
+func emit(ctx context.Context, givenTags Tags) {
+	if givenTags == nil {
+		givenTags = Tags{}
 	}
 
-	t["meta.instance"] = instanceID
-	t["meta.timestamp"] = time.Now()
+	givenTags["meta.instance"] = instanceID
+	givenTags["meta.timestamp"] = time.Now()
 
 	// Handle debug/trace messages here.
-	if rawLevel, ok := t["meta.level"]; ok {
+	if rawLevel, ok := givenTags["meta.level"]; ok {
 		switch rawLevel {
 		case DEBUG:
 			if !*debug {
@@ -46,7 +48,7 @@ func emit(ctx context.Context, t Tags) {
 	}
 
 	for sinkName, sink := range allSinks(ctx) {
-		if err := sink.Event(ctx, t); err != nil {
+		if err := sink.Event(ctx, givenTags); err != nil {
 			_ = terminal.Event(ctx, Tags{
 				"meta.level": ERROR,
 				"error":      fmt.Sprintf("could not process event sink '%s': %v", sinkName, err),

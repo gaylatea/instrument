@@ -69,7 +69,7 @@ func init() {
 }
 
 // UseSink sets a global sink for all events.
-func UseSink(name string, s Sink) {
+func UseSink(name string, newSink Sink) {
 	ctx := context.Background()
 
 	for sinkName := range allSinks(ctx) {
@@ -78,11 +78,11 @@ func UseSink(name string, s Sink) {
 		}
 	}
 
-	globalSinks[name] = s
+	globalSinks[name] = newSink
 }
 
 // WithSink adds a sink for the given context.
-func WithSink(ctx context.Context, name string, s Sink) context.Context {
+func WithSink(ctx context.Context, name string, newSink Sink) context.Context {
 	for sinkName := range allSinks(ctx) {
 		if name == sinkName {
 			Fatalf(ctx, "Cannot override existing '%s' sink!")
@@ -90,7 +90,7 @@ func WithSink(ctx context.Context, name string, s Sink) context.Context {
 	}
 
 	sinks := sinksFromContext(ctx)
-	sinks[name] = s
+	sinks[name] = newSink
 
 	return context.WithValue(ctx, keyConfiguredSinks, sinks)
 }
@@ -102,14 +102,14 @@ func With(ctx context.Context, k string, v any) context.Context {
 
 // WithAll adds multiple tags to the given context.
 func WithAll(ctx context.Context, tags Tags) context.Context {
-	ts := tagsFromContext(ctx)
+	parentTags := tagsFromContext(ctx)
 
 	// Add all the tags.
 	for k, val := range tags {
-		ts[k] = val
+		parentTags[k] = val
 	}
 
-	return context.WithValue(ctx, keyTags, ts)
+	return context.WithValue(ctx, keyTags, parentTags)
 }
 
 // SetDebug sets the visibility of debug events.
@@ -129,10 +129,10 @@ func Silence(to bool) {
 }
 
 // getCaller returns information up the stack, used for metadata.
-func getCaller(depth int) (caller, file string, line int) {
+func getCaller(depth int) (string, string, int) {
 	pc, _, _, _ := runtime.Caller(depth)
 	fn := runtime.FuncForPC(pc)
+	file, line := fn.FileLine(pc)
 
-	file, line = fn.FileLine(pc)
 	return fn.Name(), file, line
 }

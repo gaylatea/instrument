@@ -1,0 +1,9 @@
+linters:
+  # Enable all available linters.
+  # Default: false
+  enable-all: true
+  disable:
+    - depguard
+    - gochecknoglobals
+    - gochecknoinits
+    - dogsled

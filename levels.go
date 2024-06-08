@@ -32,6 +32,7 @@ func (l Level) SetStyle(s *lipgloss.Style) {
 // newStyle returns a lipgloss style for the given hexadecimal color.
 func newStyle(hex string) *lipgloss.Style {
 	thisStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(hex))
+
 	return &thisStyle
 }
 

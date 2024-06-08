@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD041 -->
+
 ![cover](./cover.svg)
 
 ## Usage

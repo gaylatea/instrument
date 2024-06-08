@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"tfw.computer/go/instrument"
+	"tfw.computer/go/instrument/v2"
 )
 
 var ErrUnknown = errors.New("unknown error")

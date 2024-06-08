@@ -1,4 +1,4 @@
-module tfw.computer/go/instrument
+module tfw.computer/go/instrument/v2
 
 go 1.22.4
 

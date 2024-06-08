@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"tfw.computer/go/instrument/v2"
+	"github.com/gaylatea/instrument"
 )
 
 var ErrUnknown = errors.New("unknown error")

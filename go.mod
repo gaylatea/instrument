@@ -1,4 +1,4 @@
-module tfw.computer/go/instrument/v2
+module github.com/gaylatea/instrument
 
 go 1.22.4
 

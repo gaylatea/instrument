@@ -22,6 +22,9 @@ runtimes:
 lint:
   disabled:
   enabled:
+    - gitleaks@8.18.3
+    - golines@0.12.2
+    - semgrep@1.75.0
     - localvale@3.5.0
     - checkov@3.2.128
     - git-diff-check

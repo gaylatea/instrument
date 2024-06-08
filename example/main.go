@@ -22,6 +22,7 @@ func (c *CounterSink) Event(_ context.Context, _ instrument.Tags) error {
 	return nil
 }
 
+//nolint:funlen
 func main() {
 	counter := &CounterSink{count: 0}
 	instrument.UseSink("counter", counter)
@@ -44,22 +45,30 @@ func main() {
 	tagged := instrument.With(bare, "test", "hello")
 	instrument.Infof(tagged, "This should have a new tag.")
 
-	_ = instrument.WithSpan(tagged, "Span 1", func(ctx context.Context, _ func(instrument.Tags)) error {
-		instrument.Infof(ctx, "This should appear inside of the trace.")
+	_ = instrument.WithSpan(
+		tagged,
+		"Span 1",
+		func(ctx context.Context, _ func(instrument.Tags)) error {
+			instrument.Infof(ctx, "This should appear inside of the trace.")
 
-		newCounter := &CounterSink{count: 0}
-		ctx = instrument.WithSink(ctx, "counter2", newCounter)
+			newCounter := &CounterSink{count: 0}
+			ctx = instrument.WithSink(ctx, "counter2", newCounter)
 
-		_ = instrument.WithSpan(ctx, "Span 2", func(ctx context.Context, _ func(instrument.Tags)) error {
-			instrument.Infof(ctx, "This should be parented to Span 2.")
+			_ = instrument.WithSpan(
+				ctx,
+				"Span 2",
+				func(ctx context.Context, _ func(instrument.Tags)) error {
+					instrument.Infof(ctx, "This should be parented to Span 2.")
 
-			return ErrUnknown
-		})
+					return ErrUnknown
+				},
+			)
 
-		instrument.Infof(ctx, "Span 1 collected %d events.", newCounter.count)
+			instrument.Infof(ctx, "Span 1 collected %d events.", newCounter.count)
 
-		return nil
-	})
+			return nil
+		},
+	)
 
 	instrument.Silence(true)
 	instrument.Infof(tagged, "This shouldn't show up.")

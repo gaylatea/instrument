@@ -28,7 +28,11 @@ const (
 var (
 	debug  = flag.Bool("debug", false, "Enable debug logging.")
 	trace  = flag.Bool("trace", false, "Enable trace logging. EXTREMELY VERBOSE.")
-	silent = flag.Bool("silent", false, "Silence terminal output from default sink. Will not affect other sinks.")
+	silent = flag.Bool(
+		"silent",
+		false,
+		"Silence terminal output from default sink. Will not affect other sinks.",
+	)
 
 	// The logging context always includes a random ID to differentiate program runs.
 	instanceID uuid.UUID

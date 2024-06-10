@@ -119,6 +119,8 @@ func marshalArray(input []interface{}, buf *bytes.Buffer, keyColor *lipgloss.Sty
 //nolint:cyclop
 func marshalValue(input interface{}, buf *bytes.Buffer, keyColor *lipgloss.Style) {
 	switch val := input.(type) {
+	case Tags:
+		marshalMap(val, buf, keyColor)
 	case map[string]interface{}:
 		marshalMap(val, buf, keyColor)
 	case []interface{}:

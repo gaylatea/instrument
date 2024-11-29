@@ -2,7 +2,7 @@ Output example.gif
 
 Set WindowBar Colorful
 Set Theme nord
-Set FontFamily "Fantasque Sans Mono"
+Set FontFamily "FantasqueSansM Nerd Font"
 Set FontSize 14
 Set Width 1300
 Set Height 600

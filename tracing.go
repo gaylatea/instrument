@@ -10,6 +10,11 @@ import (
 
 const traceCallerSkip = 2
 
+var (
+	tracesTotal  Counter = "instrument.traces.total"
+	tracesErrors Counter = "instrument.traces.errors"
+)
+
 // TraceFunc implementers run in the context of a trace.
 type TraceFunc func(ctx context.Context, addToParent func(Tags)) error
 
@@ -29,8 +34,11 @@ func WithSpan(ctx context.Context, name string, traced TraceFunc) error {
 		newCtx = WithAll(newCtx, ts)
 	})
 
+	tracesTotal.Add()
 	newTags := tagsFromContext(newCtx)
 	if wrappedErr != nil {
+		tracesErrors.Add()
+
 		newTags["meta.level"] = ERROR
 		newTags["trace.error"] = wrappedErr
 	} else {
@@ -39,7 +47,7 @@ func WithSpan(ctx context.Context, name string, traced TraceFunc) error {
 
 	newTags["trace.name"] = name
 	newTags["trace.start"] = start
-	newTags["trace.duration"] = time.Since(start)
+	newTags["trace.duration.ms"] = time.Since(start).Milliseconds()
 	newTags["meta.file"] = filename
 	newTags["meta.line"] = line
 	newTags["meta.caller"] = caller

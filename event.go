@@ -8,6 +8,7 @@ import (
 )
 
 const eventCallerSkip = 2
+const eventsEmitted Counter = "instrument.events.total"
 
 // PostEvent emits a user-created raw event without contextual metadata.
 func PostEvent(ctx context.Context, name string, givenTags Tags) {
@@ -46,6 +47,8 @@ func emit(ctx context.Context, givenTags Tags) {
 			}
 		}
 	}
+
+	eventsEmitted.Add()
 
 	for sinkName, sink := range allSinks(ctx) {
 		if err := sink.Event(ctx, givenTags); err != nil {

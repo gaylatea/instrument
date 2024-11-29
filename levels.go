@@ -12,6 +12,7 @@ const (
 	WARN
 	ERROR
 	FATAL
+	METRIC
 )
 
 // String returns a short name for the level.
@@ -38,20 +39,22 @@ func newStyle(hex string) *lipgloss.Style {
 
 var (
 	levelToName = map[Level]string{
-		TRACE: "TRA",
-		DEBUG: "DBG",
-		INFO:  "INF",
-		WARN:  "WRN",
-		ERROR: "ERR",
-		FATAL: "FTL",
+		TRACE:  "TRA",
+		DEBUG:  "DBG",
+		INFO:   "INF",
+		WARN:   "WRN",
+		ERROR:  "ERR",
+		FATAL:  "FTL",
+		METRIC: "MET",
 	}
 
 	levelToColor = map[Level]*lipgloss.Style{
-		TRACE: newStyle("#8ae234"),
-		DEBUG: newStyle("#ad7fa8"),
-		INFO:  newStyle("#34e2e2"),
-		WARN:  newStyle("#fce94f"),
-		ERROR: newStyle("#ef2929"),
-		FATAL: newStyle("#FFA500"),
+		TRACE:  newStyle("#ff87e9"),
+		DEBUG:  newStyle("#ad7fa8"),
+		INFO:   newStyle("#34e2e2"),
+		WARN:   newStyle("#fce94f"),
+		ERROR:  newStyle("#ef2929"),
+		FATAL:  newStyle("#ffa500"),
+		METRIC: newStyle("#daf0ee"),
 	}
 )

@@ -127,8 +127,11 @@ func marshalValue(input interface{}, buf *bytes.Buffer, keyColor *lipgloss.Style
 		marshalArray(val, buf, keyColor)
 	case string:
 		marshalString(val, buf)
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+	case int, int8, int16, int32, int64:
 		i := reflect.ValueOf(val).Int()
+		buf.WriteString(sprintf(numberColor, "%d", i))
+	case uint, uint8, uint16, uint32, uint64:
+		i := reflect.ValueOf(val).Uint()
 		buf.WriteString(sprintf(numberColor, "%d", i))
 	case float32, float64:
 		f := reflect.ValueOf(val).Float()

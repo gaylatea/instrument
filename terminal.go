@@ -21,6 +21,11 @@ func (cs *TerminalSink) Event(_ context.Context, givenTags Tags) error {
 		level, ok := rawLevel.(Level)
 		if ok {
 			keyColor = levelToColor[level]
+
+			// We really don't care about seeing the "MET" meta.level, so let's remove it from the output.
+			if level == METRIC {
+				delete(givenTags, "meta.level")
+			}
 		}
 	}
 
